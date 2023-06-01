@@ -125,7 +125,7 @@ class VisionTransformerForMaskedImageModeling(nn.Module):
 
     def forward(self, x, bool_masked_pos=None, return_all_tokens=False, return_patch_tokens=False):
         if bool_masked_pos is None:
-            bool_masked_pos = torch.zeros((x.shape[0], self.patch_embed.num_patches), dtype=torch.bool).to(x.device)
+            bool_masked_pos = torch.zeros((x.shape[0], self.patch_embed.num_patches), dtype=torch.bool).to(x.device, non_blocking=True)
         x = self.forward_features(x, bool_masked_pos=bool_masked_pos)
         x = x[:, 1:]
         if return_patch_tokens:
@@ -138,7 +138,7 @@ class VisionTransformerForMaskedImageModeling(nn.Module):
     
     def forward_return_qkv(self, x, bool_masked_pos=None, split_out_as_qkv=False):
         if bool_masked_pos is None:
-            bool_masked_pos = torch.zeros((x.shape[0], self.patch_embed.num_patches), dtype=torch.bool).to(x.device)
+            bool_masked_pos = torch.zeros((x.shape[0], self.patch_embed.num_patches), dtype=torch.bool).to(x.device, non_blocking=True)
         x = self.patch_embed(x, bool_masked_pos=bool_masked_pos)
         batch_size, seq_len, _ = x.size()
 
@@ -183,7 +183,7 @@ class VisionTransformerForMaskedImageModeling(nn.Module):
 
     def forward_intermediate(self, x, bool_masked_pos=None, layer_id=12):
         if bool_masked_pos is None:
-            bool_masked_pos = torch.zeros((x.shape[0], self.patch_embed.num_patches), dtype=torch.bool).to(x.device)
+            bool_masked_pos = torch.zeros((x.shape[0], self.patch_embed.num_patches), dtype=torch.bool).to(x.device, non_blocking=True)
         x = self.patch_embed(x, bool_masked_pos=bool_masked_pos)
         batch_size, seq_len, _ = x.size()
 
@@ -307,7 +307,7 @@ class VisionTransformerForMaskedImageModelingCLS(VisionTransformerForMaskedImage
 
     def forward(self, x, bool_masked_pos=None, return_all_tokens=False, return_patch_tokens=False):
         if bool_masked_pos is None:
-            bool_masked_pos = torch.zeros((x.shape[0], self.patch_embed.num_patches), dtype=torch.bool).to(x.device)
+            bool_masked_pos = torch.zeros((x.shape[0], self.patch_embed.num_patches), dtype=torch.bool).to(x.device, non_blocking=True)
         x, x_cls_pt = self.forward_features(x, bool_masked_pos=bool_masked_pos)
         x = x[:, 1:]
         x_cls_pt = x_cls_pt[:, 1:]

@@ -179,7 +179,7 @@ def calculate_codebook_usage(data_loader, model, device, log_writer=None, epoch=
     model.eval()
     
     codebook_num = args.codebook_n_emd
-    codebook_cnt = torch.zeros(codebook_num, dtype=torch.float64).to(device)
+    codebook_cnt = torch.zeros(codebook_num, dtype=torch.float64).to(device, non_blocking=True)
 
     for step, (images, _) in enumerate(metric_logger.log_every(data_loader, 10, header)):
         images = images.to(device, non_blocking=True)

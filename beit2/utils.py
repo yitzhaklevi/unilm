@@ -55,7 +55,7 @@ def get_model(model):
         return model.module
     else:
         return model
-            
+
 class SmoothedValue(object):
     """Track a series of values and provide access to smoothed values over a
     window or the global series average.
@@ -221,13 +221,13 @@ class TensorboardLogger(object):
                 v = v.item()
             assert isinstance(v, (float, int))
             self.writer.add_scalar(head + "/" + k, v, self.step if step is None else step)
-    
+
     def update_image(self, head='images', step=None, **kwargs):
         for k, v in kwargs.items():
             if v is None:
                 continue
             self.writer.add_image(head + "/" + k, v, self.step if step is None else step)
-            
+
     def flush(self):
         self.writer.flush()
 
@@ -499,21 +499,21 @@ class NativeScalerWithGradNormCount:
     def state_dict(self):
         return self._scaler.state_dict()
 
-    def load_state_dict(self, state_dict): 
+    def load_state_dict(self, state_dict):
         self._scaler.load_state_dict(state_dict)
 
 
 def get_grad_norm_(parameters, norm_type: float = 2.0, layer_names=None) -> torch.Tensor:
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
-    
+
     parameters = [p for p in parameters if p.grad is not None]
-        
+
     norm_type = float(norm_type)
     if len(parameters) == 0:
         return torch.tensor(0.)
     device = parameters[0].grad.device
-    
+
     if norm_type == inf:
         total_norm = max(p.grad.detach().abs().max().to(device) for p in parameters)
     else:
@@ -521,13 +521,13 @@ def get_grad_norm_(parameters, norm_type: float = 2.0, layer_names=None) -> torc
         layer_norm = torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters])
         total_norm = torch.norm(layer_norm, norm_type)
         # print(layer_norm.max(dim=0))
-        
+
         if layer_names is not None:
             if torch.isnan(total_norm) or torch.isinf(total_norm) or total_norm > 1.0:
                 value_top, name_top = torch.topk(layer_norm, k=5)
                 print(f"Top norm value: {value_top}")
                 print(f"Top norm name: {[layer_names[i][7:] for i in name_top.tolist()]}")
-        
+
     return total_norm
 
 
@@ -575,7 +575,7 @@ def save_model(args, epoch, model, model_without_ddp, optimizer, loss_scaler, mo
 
             if model_ema is not None:
                 to_save['model_ema'] = get_state_dict(model_ema)
-                
+
             if optimizer_disc is not None:
                 to_save['optimizer_disc'] = optimizer_disc.state_dict()
 
@@ -584,11 +584,11 @@ def save_model(args, epoch, model, model_without_ddp, optimizer, loss_scaler, mo
         client_state = {'epoch': epoch}
         if model_ema is not None:
             client_state['model_ema'] = get_state_dict(model_ema)
-        model.save_checkpoint(save_dir=args.output_dir, tag="checkpoint-%s" % epoch_name, client_state=client_state)           
+        model.save_checkpoint(save_dir=args.output_dir, tag="checkpoint-%s" % epoch_name, client_state=client_state)
 
 def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, model_ema=None, optimizer_disc=None):
     output_dir = Path(args.output_dir)
-    
+
     if not getattr(args, 'enable_deepspeed', False):
         # torch.amp
         if args.auto_resume and len(args.resume) == 0:

@@ -20,11 +20,10 @@ def initialize_process_group(
     os.environ["LOCAL_RANK"] = str(setup_args["local_rank"])
     dist_url = f"tcp://{master_addr}:{master_port}"
     if backend == "hccl":
+        import habana_frameworks.torch.distributed.hccl as hccl
+        hccl.initialize_distributed_hpu(world_size=setup_args["world_size"], rank=setup_args["global_rank"], local_rank=setup_args["local_rank"])
         dist.init_process_group(
-            backend=backend,
-            rank=setup_args["global_rank"],
-            world_size=setup_args["world_size"],
-        )
+            backend=backend)
     elif backend == "smddp":
         os.environ["SMDATAPARALLEL_LMC_ENABLE"] = "1"
         import smdistributed.dataparallel.torch.torch_smddp

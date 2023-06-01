@@ -67,7 +67,7 @@ class AttentionPool2d(nn.Module):
     def forward(self, x, return_all_tokens=False):
         x = x.reshape(x.shape[0], x.shape[1], x.shape[2] * x.shape[3]).permute(2, 0, 1)  # NCHW -> (HW)NC
         x = torch.cat([x.mean(dim=0, keepdim=True), x], dim=0)  # (HW+1)NC
-        x = x + self.positional_embedding[:, None, :].to(x.dtype)  # (HW+1)NC
+        x = x + self.positional_embedding[:, None, :].to(x.dtype, non_blocking=True)  # (HW+1)NC
         x, _ = F.multi_head_attention_forward(
             query=x, key=x, value=x,
             embed_dim_to_check=x.shape[-1],
@@ -193,7 +193,7 @@ class ResidualAttentionBlock(nn.Module):
         self.attn_mask = attn_mask
 
     def attention(self, x: torch.Tensor):
-        self.attn_mask = self.attn_mask.to(dtype=x.dtype, device=x.device) if self.attn_mask is not None else None
+        self.attn_mask = self.attn_mask.to(dtype=x.dtype, device=x.device, non_blocking=True) if self.attn_mask is not None else None
         # pdb.set_trace()
         return self.attn(x, x, x, need_weights=False, attn_mask=self.attn_mask)[0]
 
@@ -249,12 +249,12 @@ class VisionTransformer(nn.Module):
         x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
         x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
 
-        x = torch.cat([self.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
+        x = torch.cat([self.class_embedding.to(x.dtype, non_blocking=True) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
         
         if x.shape[1] != self.positional_embedding.shape[0]:
-            x = x + self.interpolate_pos_encoding(x, w, h).to(x.dtype)
+            x = x + self.interpolate_pos_encoding(x, w, h).to(x.dtype, non_blocking=True)
         else:
-            x = x + self.positional_embedding.to(x.dtype)
+            x = x + self.positional_embedding.to(x.dtype, non_blocking=True)
 
         x = self.ln_pre(x)
 
