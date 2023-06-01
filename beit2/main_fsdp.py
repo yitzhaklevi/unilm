@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 from beit2.beit_model import BeitTrainingModule
 from beit2.beit_local_dataset import BeitLocalDataset
-from beit2.beit_v2_loss import NoDynamicShapesCrossedEntropy
+from beit2.beit_v2_loss import MaskedCrossedEntropy
 from beit2.distributed_utils import get_setup_defaults, initialize_process_group
 
 from torch.distributed.fsdp import (
@@ -75,7 +75,7 @@ def mp_fn(local_rank):
         check_fn=lambda layer: isinstance(layer, Block),
     )
 
-    loss = NoDynamicShapesCrossedEntropy()
+    loss = MaskedCrossedEntropy()
     optimizer = torch.optim.AdamW(params=model.parameters(), amsgrad=False)
     num_params_after_shard = sum(p.numel() for p in model.parameters())
     print(f' model with {num_params_before_shard / 1e6}M params,'

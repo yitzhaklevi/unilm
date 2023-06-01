@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 from beit2.beit_model import BeitTrainingModule
 from beit2.beit_local_dataset import BeitLocalDataset
-from beit2.beit_v2_loss import BeitV2Loss
+from beit2.beit_v2_loss import NoDynamicShapesMaskedCrossedEntropy, MaskedCrossedEntropy
 from beit2.distributed_utils import get_setup_defaults, initialize_process_group
 from torch.nn.parallel import DistributedDataParallel as DDP
 from itertools import chain
@@ -60,7 +60,7 @@ def mp_fn(local_rank):
     enable_mixed_precision()
     device = torch.device("hpu")
     model = get_model()
-    loss = BeitV2Loss()
+    loss = NoDynamicShapesMaskedCrossedEntropy()
     optimizer = torch.optim.AdamW(params=model.parameters(), amsgrad=False)
     num_params = sum(p.numel() for p in model.parameters())
     print(f'built model with {num_params / 1e6}M params')
@@ -108,7 +108,7 @@ def mp_fn(local_rank):
 def train_on_cpu():
     device = torch.device("cpu")
     model = get_model()
-    loss = BeitV2Loss()
+    loss = MaskedCrossedEntropy()
     optimizer = torch.optim.AdamW(params=model.parameters(), amsgrad=False)
     num_params = sum(p.numel() for p in model.parameters())
     print(f'built model with {num_params / 1e6}M params')
@@ -139,6 +139,7 @@ def train_on_cpu():
             samples_processed = batch_size * log_interval
             print(f'{samples_processed / time_passed} samples/second')
             t0 = time.perf_counter()
+
 
 if __name__ == '__main__':
     args = get_args()
