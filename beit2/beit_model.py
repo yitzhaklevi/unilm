@@ -56,7 +56,7 @@ class BeitTrainingModule(nn.Module):
             param.requires_grad = False
         self._flip_for_tokenizer = flip_for_tokenizer
 
-        self.mae_model = MaskedAutoencoderViT(**mae_model_config)
+        self.mae_model = MaskedAutoencoderViT(**mae_model_config, final_proj_dim=CodebookSize)
 
     def train(self, mode: bool = True):
         if mode is False:
@@ -80,7 +80,7 @@ class BeitTrainingModule(nn.Module):
         # do res.missing_keys = ... instead we create a new object with the correct values
         return type(res)(
             missing_keys=type(res.missing_keys)(prefix + k for k in res.missing_keys),
-            unexpected_keys = type(res.unexpected_keys)(prefix + k for k in res.unexpected_keys),
+            unexpected_keys=type(res.unexpected_keys)(prefix + k for k in res.unexpected_keys),
         )
 
     def forward(self, batch):
@@ -93,12 +93,13 @@ class BeitTrainingModule(nn.Module):
                 patches_shape = (-1,) + self.tokenizer.token_shape
                 labels = labels.reshape(patches_shape).flip(1).reshape(labels.shape) # B,N -> B,NH,NW -> B,NH,NW (flipped) -> B,N
 
-        outputs = self.mae_model(batch)
+        outputs, mask = self.mae_model(batch['img'])
 
         if isinstance(outputs, torch.Tensor):
             return {
                 "tokenizer_labels": labels,
-                "beit_model_output": outputs
+                "beit_model_output": outputs,
+                "invis_mask": mask
             }
         else:
             assert isinstance(outputs, dict)
