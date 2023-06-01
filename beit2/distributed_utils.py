@@ -2,6 +2,11 @@ import os
 import torch.distributed as dist
 from typing import Dict, Union
 
+
+def is_sm_run():
+    return "TRAINING_JOB_NAME" in os.environ
+
+
 def initialize_process_group(
     setup_args: Dict[str, Union[int, str]], backend: str = "nccl"
 ) -> None:
@@ -23,7 +28,6 @@ def initialize_process_group(
     elif backend == "smddp":
         os.environ["SMDATAPARALLEL_LMC_ENABLE"] = "1"
         import smdistributed.dataparallel.torch.torch_smddp
-
         dist.init_process_group(backend)
     else:
         dist.init_process_group(
@@ -87,6 +91,10 @@ def get_num_nodes() -> int:
     Returns:
         integer
     """
+    if is_sm_run():
+        import json
+        cluster_inf = json.loads(os.environ.get("SM_RESOURCE_CONFIG"))
+        return len(cluster_inf["hosts"])
     return 1
 
 
@@ -96,4 +104,8 @@ def get_node_rank() -> int:
     Returns:
         int
     """
+    if is_sm_run():
+        import json
+        cluster_inf = json.loads(os.environ.get("SM_RESOURCE_CONFIG"))
+        return cluster_inf["hosts"].index(cluster_inf["current_host"])
     return 0
