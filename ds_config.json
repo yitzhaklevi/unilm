@@ -1,0 +1,17 @@
+{
+  "train_batch_size": 512,
+  "gradient_accumulation_steps": 1,
+  "gradient_clipping": 1.0,
+  "bf16": {
+      "enabled": true
+  },
+  "wall_clock_breakdown": false,
+  "zero_optimization": { "stage": 2,
+    "overlap_comm": false,
+    "reduce_scatter" : false,
+    "contiguous_gradients" : false,
+    "reduce_bucket_size": 1000000
+  },
+  "zero_allow_untested_optimizer": true
+}
+
