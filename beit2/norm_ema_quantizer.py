@@ -71,6 +71,7 @@ class EmbeddingEMA(nn.Module):
         self.codebook_dim = codebook_dim
         self.decay = decay
         self.eps = eps
+        self.initted_c = False
         if codebook_init_path == '':
             if not kmeans_init:
                 weight = torch.randn(num_tokens, codebook_dim)
@@ -90,15 +91,24 @@ class EmbeddingEMA(nn.Module):
         # self.register_buffer('initted', torch.Tensor([not kmeans_init]))
         self.update = True
 
+    def isEmbedInitted(self):
+        if not self.initted_c and  not self.initted:
+            return false
+        else:
+            return self.initted_c
+
     @torch.jit.ignore
     def init_embed_(self, data):
-        if self.initted:
+        if not self.initted_c and  not self.initted:
+            print("Performing Kemans init for codebook")
+            embed, cluster_size = kmeans(data, self.num_tokens, 10, use_cosine_sim=True)
+            self.weight.data.copy_(embed, non_blocking=True)
+            self.cluster_size.data.copy_(cluster_size, non_blocking=True)
+            self.initted.data.copy_(torch.Tensor([True]), non_blocking=True)
+        elif self.initted_c:
             return
-        print("Performing Kemans init for codebook")
-        embed, cluster_size = kmeans(data, self.num_tokens, 10, use_cosine_sim=True)
-        self.weight.data.copy_(embed, non_blocking=True)
-        self.cluster_size.data.copy_(cluster_size, non_blocking=True)
-        self.initted.data.copy_(torch.Tensor([True]), non_blocking=True)
+        else:
+            self.initted_c = self.initted.item()
 
     def forward(self, embed_id):
         return F.embedding(embed_id, self.weight)
@@ -162,7 +172,8 @@ class NormEMAVectorQuantizer(nn.Module):
         z = l2norm(z)
         z_flattened = z.reshape(-1, self.codebook_dim)
 
-        self.embedding.init_embed_(z_flattened)
+        if not self.embedding.isEmbedInitted():
+            self.embedding.init_embed_(z_flattened)
 
         d = z_flattened.pow(2).sum(dim=1, keepdim=True) + \
             self.embedding.weight.pow(2).sum(dim=1) - 2 * \
@@ -212,4 +223,3 @@ class NormEMAVectorQuantizer(nn.Module):
         # z_q, 'b h w c -> b c h w'
         z_q = rearrange(z_q, 'b h w c -> b c h w')
         return z_q, loss, encoding_indices
-

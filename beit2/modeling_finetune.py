@@ -40,7 +40,7 @@ class DropPath(nn.Module):
 
     def forward(self, x):
         return drop_path(x, self.drop_prob, self.training)
-    
+
     def extra_repr(self) -> str:
         return 'p={}'.format(self.drop_prob)
 
@@ -59,7 +59,7 @@ class Mlp(nn.Module):
         x = self.fc1(x)
         x = self.act(x)
         # x = self.drop(x)
-        # commit this for the orignal BERT implement 
+        # commit this for the orignal BERT implement
         x = self.fc2(x)
         x = self.drop(x)
         return x
@@ -142,13 +142,13 @@ class Attention(nn.Module):
 
         if rel_pos_bias is not None:
             attn = attn + rel_pos_bias
-        
+
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
 
         if return_attention:
             return attn
-            
+
         x = (attn @ v).transpose(1, 2).reshape(B, N, -1)
         x = self.proj(x)
         x = self.proj_drop(x)
@@ -373,8 +373,8 @@ class VisionTransformer(nn.Module):
     def forward_features(self, x, return_patch_tokens=False, return_all_tokens=False, **kwargs):
         B, nc, w, h = x.shape
         x = self.patch_embed(x)
-        batch_size, seq_len, _ = x.size()  
-        
+        batch_size, seq_len, _ = x.size()
+
         cls_tokens = self.cls_token.expand(batch_size, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
 
         x = torch.cat((cls_tokens, x), dim=1)
@@ -383,7 +383,7 @@ class VisionTransformer(nn.Module):
                 x = x + self.interpolate_pos_encoding(x, w, h)
             else:
                 x = x + self.pos_embed
-                
+
         x = self.pos_drop(x)
 
         rel_pos_bias = self.rel_pos_bias() if self.rel_pos_bias is not None else None
@@ -446,7 +446,7 @@ class VisionTransformer(nn.Module):
             return x[:, 1:]
         else:
             raise NotImplementedError(f"Not support for layer id is {layer_id} now!")
-    
+
     def get_intermediate_layers(self, x, use_last_norm=False):
         x = self.patch_embed(x)
         batch_size, seq_len, _ = x.size()

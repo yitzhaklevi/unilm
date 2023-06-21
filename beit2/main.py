@@ -58,6 +58,8 @@ def get_model():
     #mae_model_config = {'patch_size': patch_size, 'in_chans': 1,
     #                    'depth': 12, 'num_heads': 12, 'embed_dim': 768,
     #                    'decoder_depth': 2, 'decoder_num_heads': 16, 'decoder_embed_dim': 512}
+
+    #2.5B params
     mae_model_config = {'patch_size': patch_size, 'in_chans': 1,
                         'depth': 48, 'num_heads': 16, 'embed_dim': 2048,
                         'decoder_depth': 2, 'decoder_num_heads': 16, 'decoder_embed_dim': 512}
@@ -108,15 +110,16 @@ def train_main_loop(dl,
         if profiler is not None:
             profiler.step()
 
-        if curr_iter > skip_first_iters and (curr_iter-skip_first_iters) % log_every == 0 and local_rank == 0:
+        if curr_iter > skip_first_iters and (curr_iter-skip_first_iters) % log_every == 0:
             time_passed = time.perf_counter() - t0
             if not single_card_:
                 samples_processed = dist.get_world_size() * batch_size * log_every
             else:
                 samples_processed = 1 * batch_size * log_every
             time_stamps.append(samples_processed / (time.perf_counter() - t0))
-            print('iteration ', curr_iter, ':')
-            print(f'{samples_processed / time_passed} samples/second')
+            if local_rank == 0:
+                print('iteration ', curr_iter, ':')
+                print(f'{samples_processed / time_passed} samples/second')
             t0 = time.perf_counter()
         curr_iter += 1
         if stop:
@@ -189,7 +192,7 @@ def mp_fn(local_rank):
     if profile_:
         p_activities = [torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU]
         with torch.profiler.profile(
-            schedule=torch.profiler.schedule(wait=0, warmup=20, active=5, repeat=1),
+            schedule=torch.profiler.schedule(wait=0, warmup=30, active=5, repeat=1),
             activities=p_activities,
             on_trace_ready=torch.profiler.tensorboard_trace_handler('/unilm/TM_logs')) as profiler:
 

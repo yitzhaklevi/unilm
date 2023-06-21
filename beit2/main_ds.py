@@ -73,6 +73,7 @@ def train_main_loop(dl,
                 profiler):
     import time
     t0 = time.perf_counter()
+
     for batch_idx, batch_data in enumerate(dl, start=1):
         if curr_iter <= skip_first_iters+1:
             t0 = time.perf_counter()
@@ -83,10 +84,11 @@ def train_main_loop(dl,
 
         if isinstance(batch_data, dict):
             for k, v in batch_data.items():
-                batch_data[k] = v.to(device, non_blocking=True)
+                batch_data[k] = v.to(device, non_blocking=True, dtype=torch.bfloat16)
         else:
-            batch_data = batch_data.to(device, non_blocking=True)
-        outputs = model_enigne(batch_data)
+            batch_data = batch_data.to(device, non_blocking=True, dtype=torch.bfloat16)
+        
+        outputs = model_engine(batch_data)
         l = loss(outputs, batch_data)['loss']
 
         model_engine.backward(l)
@@ -100,12 +102,13 @@ def train_main_loop(dl,
         if profiler is not None:
             profiler.step()
 
-        if curr_iter > skip_first_iters and (curr_iter-skip_first_iters) % log_every == 0 and local_rank == 0:
+        if curr_iter > skip_first_iters and (curr_iter-skip_first_iters) % log_every == 0:
             time_passed = time.perf_counter() - t0
             samples_processed = world_size * batch_size * log_every
             time_stamps.append(samples_processed / (time.perf_counter() - t0))
-            print('iteration ', curr_iter, ':')
-            print(f'{samples_processed / time_passed} samples/second')
+            if local_rank == 0:
+                print('iteration ', curr_iter, ':')
+                print(f'{samples_processed / time_passed} samples/second')
             t0 = time.perf_counter()
         curr_iter += 1
         if stop:
@@ -125,6 +128,8 @@ def mp_fn(deepSpeed_config):
     device = torch.device("hpu")
     model = get_model()
     loss = NoDynamicShapesMaskedCrossedEntropy()
+    model.to(device, dtype=torch.bfloat16)
+    loss.to(device, dtype=torch.bfloat16)
 
     param_optimizer = list(model.named_parameters())
     no_decay = ['bias', 'gamma', 'beta', 'LayerNorm']
@@ -145,13 +150,11 @@ def mp_fn(deepSpeed_config):
     mem = mem_params + mem_bufs
     print(f'memory required to fit model: {mem / 1e9} Gigabytes')
 
-    model.to(device, dtype=torch.bfloat16)
-    loss.to(device, dtype=torch.bfloat16)
-    batch_size = 64
+    batch_size = 96
     dl = DataLoader(BeitLocalDataset(batch_size * 10000), batch_size=batch_size, num_workers=10, pin_memory=True)
     model.train()
     model_engine, optimizer ,train_loader,_ = deepspeed.initialize(args=deepSpeed_config, model=model, optimizer=optimizer ,model_parameters=None, training_data=dl.dataset)
-    _, train_micro_batch_size_per_gpu, _ = model.get_batch_info()
+    _, train_micro_batch_size_per_gpu, _ = model_engine.get_batch_info()
     ds_batch_size = train_micro_batch_size_per_gpu()
     if ds_batch_size != batch_size:
         raise(BaseException("deep speed batch size diffrenet from script batch size, "+str(ds_batch_size)+"!="+str(batch_size)))

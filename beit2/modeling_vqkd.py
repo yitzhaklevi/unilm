@@ -126,13 +126,14 @@ class VQKD(nn.Module):
     def pre_process(self, data):
         if self.process_type == 'default':
             # TODO: modify for adapt
-            data = data.to(self.device)
+            data = data.to(self.device, non_blocking=True)
             if data.max() <= 1.:
                 data = data * 255.
             data = data / 127.5 - 1.0
         elif self.process_type == 'imagenet_norm':
-            mean = torch.as_tensor(IMAGENET_DEFAULT_MEAN).to(self.device)[None, :, None, None]
-            std = torch.as_tensor(IMAGENET_DEFAULT_STD).to(self.device)[None, :, None, None]
+            data = data.to(self.device, non_blocking=True)
+            mean = torch.as_tensor(IMAGENET_DEFAULT_MEAN).to(self.device, dtype=torch.bfloat16 ,non_blocking=True)[None, :, None, None]
+            std = torch.as_tensor(IMAGENET_DEFAULT_STD).to(self.device, dtype=torch.bfloat16 ,non_blocking=True)[None, :, None, None]
             data = (data - mean) / std
         return data
         
